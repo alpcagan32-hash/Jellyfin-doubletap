@@ -1,0 +1,108 @@
+<script>
+(function () {
+  const SEEK = 5; // real forwarding time divided by 2
+  console.log("[doubletap] final-polish overlay");
+
+  function findVideo(root=document){
+    try{
+      const vids=root.querySelectorAll("video");
+      if(vids.length)return vids[0];
+      for(const el of root.querySelectorAll("*")){
+        if(el.shadowRoot){
+          const v=findVideo(el.shadowRoot);
+          if(v)return v;
+        }
+      }
+    }catch(e){}
+    return null;
+  }
+
+  let video=null;
+  function refreshVideo(){
+    const v=findVideo();
+    if(v&&!v._dblBound){
+      video=v;v._dblBound=true;
+      console.log("[doubletap] bound to <video>");
+    }
+  }
+  setInterval(refreshVideo,800);
+  refreshVideo();
+
+  function showOverlay(isLeft){
+    const container=document.createElement("div");
+    container.innerHTML=`
+      <div class="dblOverlay ${isLeft?'left':'right'}">
+        ${isLeft?`<span class="arrow">&#60;</span><span class="num">-10</span>`:`<span class="num">+10</span><span class="arrow">&#62;</span>`}
+      </div>
+      <style>
+        .dblOverlay{
+          position:fixed;
+          top:50%;
+          transform:translateY(-50%) scale(0.95);
+          color:white;
+          font-family:'Segoe UI',Roboto,Arial,sans-serif;
+          font-weight:300;
+          font-size:26px;
+          opacity:0.75;
+          display:flex;
+          align-items:center;
+          gap:6px;
+          pointer-events:none;
+          z-index:99999;
+          animation-duration:0.65s;
+          animation-timing-function:cubic-bezier(0.25, 1, 0.5, 1);
+          text-shadow:0 0 6px rgba(0,0,0,.45);
+        }
+        .dblOverlay.left{ left:6%; animation-name:slideLeft; justify-content:flex-start; }
+        .dblOverlay.right{ right:6%; animation-name:slideRight; justify-content:flex-end; }
+
+        @keyframes slideRight {
+          0%   {opacity:0; transform:translateY(-50%) translateX(-20px) scale(0.9);}
+          35%  {opacity:1; transform:translateY(-50%) translateX(6px) scale(1);}
+          100% {opacity:0; transform:translateY(-50%) translateX(20px) scale(0.9);}
+        }
+        @keyframes slideLeft {
+          0%   {opacity:0; transform:translateY(-50%) translateX(20px) scale(0.9);}
+          35%  {opacity:1; transform:translateY(-50%) translateX(-6px) scale(1);}
+          100% {opacity:0; transform:translateY(-50%) translateX(-20px) scale(0.9);}
+        }
+      </style>`;
+    document.body.appendChild(container);
+    setTimeout(()=>container.remove(),650);
+  }
+
+  function inVideo(x,y){
+    if(!video)return false;
+    const r=video.getBoundingClientRect();
+    return x>=r.left&&x<=r.right&&y>=r.top&&y<=r.bottom;
+  }
+
+  function seek(x){
+    if(!video)return;
+    const r=video.getBoundingClientRect();
+    const left=x<r.left+r.width/2;
+    const t=left
+      ?Math.max(0,video.currentTime-SEEK)
+      :Math.min(video.duration,video.currentTime+SEEK);
+    video.currentTime=t;
+    showOverlay(left);
+  }
+
+  document.addEventListener("dblclick",e=>{
+    if(inVideo(e.clientX,e.clientY)){
+      e.stopImmediatePropagation();e.preventDefault();
+      seek(e.clientX);
+    }
+  },true);
+
+  let last=0;
+  document.addEventListener("pointerup",e=>{
+    const now=Date.now();
+    if(!inVideo(e.clientX,e.clientY)){last=0;return;}
+    if(now-last<350){
+      e.stopImmediatePropagation();e.preventDefault();
+      seek(e.clientX);last=0;
+    }else last=now;
+  },{capture:true,passive:false});
+})();
+</script>
