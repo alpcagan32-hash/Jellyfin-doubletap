@@ -1,5 +1,5 @@
 # Jellyfin-doubletap
-its basic script for forwarding a video on jellyfin web player with doubletaps on left or right of the screen
+its basic script for forwarding a video on jellyfin web player with doubletaps on left or right of the screen it works on android app too as far as i tried
 
 How to Setup
 1. Open your notepad as admin
